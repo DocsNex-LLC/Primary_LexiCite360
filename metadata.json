@@ -1,0 +1,5 @@
+{
+  "name": "CiteCheck Pro",
+  "description": "A legal tech application to detect and verify legal citations in text, utilizing Regex extraction and AI-powered verification to prevent hallucinations.",
+  "requestFramePermissions": []
+}
