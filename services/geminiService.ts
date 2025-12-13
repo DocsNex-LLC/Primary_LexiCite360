@@ -38,9 +38,10 @@ export const verifyCitationWithGemini = async (citationText: string): Promise<Ve
           properties: {
             isValid: { type: Type.BOOLEAN, description: "True if the citation refers to a real legal reporter volume and page format, or a known case." },
             caseName: { type: Type.STRING, description: "The likely case name (e.g. 'Roe v. Wade') if known, or null." },
-            reason: { type: Type.STRING, description: "Short explanation of why it is valid or invalid." }
+            reason: { type: Type.STRING, description: "Short explanation of why it is valid or invalid." },
+            confidence: { type: Type.INTEGER, description: "Confidence score between 0 and 100 regarding the verification assessment." }
           },
-          required: ["isValid", "caseName", "reason"]
+          required: ["isValid", "caseName", "reason", "confidence"]
         }
       }
     });

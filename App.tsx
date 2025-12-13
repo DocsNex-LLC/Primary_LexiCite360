@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   BookOpen, ShieldCheck, Eraser, Play, Layout, Clock, 
   Settings, FileText, Download, ChevronRight, Search, 
-  User, CheckCircle, AlertTriangle, Briefcase
+  User, CheckCircle, AlertTriangle, Briefcase, Zap
 } from 'lucide-react';
 import { Citation, AnalysisStats, CitationFilter } from './types';
 import { extractCitations, highlightText } from './services/citationService';
@@ -23,6 +23,10 @@ Please analyze the text above.`);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<CitationFilter>('all');
   const [documentTitle, setDocumentTitle] = useState("Untitled Legal Brief");
+  const [isLiveMode, setIsLiveMode] = useState(false);
+
+  // Debounce ref
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Stats calculation
   const stats: AnalysisStats = useMemo(() => {
@@ -40,28 +44,22 @@ Please analyze the text above.`);
     return citations;
   }, [citations, activeTab]);
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(e.target.value);
-    // Clear citations on edit to ensure state consistency
-    if (citations.length > 0) setCitations([]);
-  };
-
-  const handleClear = () => {
-    if (window.confirm("Are you sure you want to clear the editor?")) {
-      setInputText('');
-      setCitations([]);
-    }
-  };
-
   const runAnalysis = async () => {
     if (!inputText.trim()) return;
 
     setIsAnalyzing(true);
-    setActiveTab('all');
+    // Only switch tab if manually triggered or if logic requires it. 
+    // For live mode, we might not want to jump tabs unexpectedly, but for now we keep it consistent.
+    if (!isLiveMode) setActiveTab('all'); 
     
     // 1. Extract
     const extracted = extractCitations(inputText);
     setCitations(extracted);
+
+    if (extracted.length === 0) {
+      setIsAnalyzing(false);
+      return;
+    }
 
     // 2. Verify
     const verificationPromises = extracted.map(async (citation) => {
@@ -78,7 +76,8 @@ Please analyze the text above.`);
             ...c,
             status: result.isValid ? 'valid' : 'hallucination',
             caseName: result.caseName || undefined,
-            reason: result.reason
+            reason: result.reason,
+            confidence: result.confidence
           };
         }
         return c;
@@ -87,6 +86,36 @@ Please analyze the text above.`);
 
     await Promise.allSettled(verificationPromises);
     setIsAnalyzing(false);
+  };
+
+  // Real-time analysis effect
+  useEffect(() => {
+    if (!isLiveMode) return;
+
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      runAnalysis();
+    }, 1500); // 1.5 second debounce
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [inputText, isLiveMode]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputText(e.target.value);
+    // Clear citations on edit to ensure state consistency, highlights will reappear after analysis
+    if (citations.length > 0) setCitations([]);
+  };
+
+  const handleClear = () => {
+    if (window.confirm("Are you sure you want to clear the editor?")) {
+      setInputText('');
+      setCitations([]);
+    }
   };
 
   const renderHighlightedText = () => {
@@ -187,16 +216,34 @@ Please analyze the text above.`);
                </span>
              </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
+            
+            {/* Live Mode Toggle */}
+            <div className="flex items-center space-x-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+               <button
+                 onClick={() => setIsLiveMode(!isLiveMode)}
+                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${isLiveMode ? 'bg-green-500' : 'bg-gray-300'}`}
+               >
+                 <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition duration-200 ease-in-out ${isLiveMode ? 'translate-x-5' : 'translate-x-1'}`} />
+               </button>
+               <div className="flex items-center space-x-1 pr-1">
+                 <Zap className={`w-3 h-3 ${isLiveMode ? 'text-green-600' : 'text-gray-400'}`} />
+                 <span className={`text-xs font-medium ${isLiveMode ? 'text-green-700' : 'text-gray-500'}`}>Live Analysis</span>
+               </div>
+            </div>
+
+            <div className="h-6 w-px bg-gray-200 mx-2"></div>
+
             <button 
               onClick={() => alert("Mock: Report downloaded as PDF")}
               className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
             >
               <Download className="w-4 h-4" />
-              <span>Export Report</span>
+              <span className="hidden sm:inline">Export</span>
             </button>
+            
             <button 
-              onClick={runAnalysis}
+              onClick={() => runAnalysis()}
               disabled={isAnalyzing || !inputText}
               className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm transition-all
                 ${isAnalyzing || !inputText 
@@ -205,7 +252,7 @@ Please analyze the text above.`);
                 }`}
             >
               {isAnalyzing ? <Play className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-              <span>{isAnalyzing ? 'Verifying...' : 'Verify Citations'}</span>
+              <span>{isAnalyzing ? 'Verifying...' : 'Verify Now'}</span>
             </button>
           </div>
         </header>

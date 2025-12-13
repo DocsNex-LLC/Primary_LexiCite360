@@ -13,6 +13,7 @@ export interface VerificationResponse {
   isValid: boolean;
   caseName: string | null;
   reason: string;
+  confidence?: number;
 }
 
 export interface AnalysisStats {
