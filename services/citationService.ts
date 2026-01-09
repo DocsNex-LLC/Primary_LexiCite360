@@ -1,22 +1,31 @@
 import { Citation } from '../types';
 
-// The Regex pattern from the requirements:
-// (\d{1,4}\s[A-Z][a-z]?\.?\s?\w{1,5}\.?\s?\w{1,3}\.?\s\d{1,4})
-// Adjusted slightly to ensure it captures common variations more robustly in a global search
-const CITATION_REGEX = /(\d{1,4}\s[A-Z][a-z]?\.?\s?\w{1,5}\.?\s?\w{1,3}\.?\s\d{1,4})/g;
+// The default pattern from the requirements
+export const DEFAULT_CITATION_PATTERN = "(\\d{1,4}\\s[A-Z][a-z]?\\.?\\s?\\w{1,5}\\.?\\s?\\w{1,3}\\.?\\s\\d{1,4})";
 
-export const extractCitations = (text: string): Citation[] => {
-  const matches = [...text.matchAll(CITATION_REGEX)];
+export const extractCitations = (text: string, pattern: string = DEFAULT_CITATION_PATTERN): Citation[] => {
+  let regex: RegExp;
+  try {
+    // Ensure the pattern is global to find all matches
+    regex = new RegExp(pattern, 'g');
+  } catch (e) {
+    console.error("Invalid Regex provided:", e);
+    return [];
+  }
+
+  const matches = [...text.matchAll(regex)];
   
   return matches.map((match, index) => {
     // Deterministic ID based on content and position to prevent React key thrashing
-    const stableId = `cite-${match.index}-${match[0].replace(/\s/g, '_')}`;
+    const content = match[0] || '';
+    const startIndex = match.index || 0;
+    const stableId = `cite-${startIndex}-${content.replace(/\s/g, '_')}`;
     
     return {
       id: stableId,
-      originalText: match[0],
-      startIndex: match.index || 0,
-      endIndex: (match.index || 0) + match[0].length,
+      originalText: content,
+      startIndex: startIndex,
+      endIndex: startIndex + content.length,
       status: 'pending'
     };
   });
