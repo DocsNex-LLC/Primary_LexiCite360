@@ -21,6 +21,8 @@ export interface Citation {
   confidence?: number;
   reason?: string;
   sources?: CitationSource[];
+  courtListenerId?: number;
+  isCourtListenerVerified?: boolean;
 }
 
 export interface VerificationResponse {
@@ -35,6 +37,16 @@ export interface VerificationResponse {
     uri?: string;
   };
   sources?: CitationSource[];
+  courtListenerId?: number;
+}
+
+export interface CourtListenerLookupResult {
+  found: boolean;
+  caseName: string | null;
+  citation: string | null;
+  id: number | null;
+  absolute_url: string | null;
+  error?: string;
 }
 
 export interface AnalysisStats {
@@ -44,7 +56,7 @@ export interface AnalysisStats {
   pending: number;
 }
 
-export type CitationFilter = 'all' | 'issues' | 'valid';
+export type CitationFilter = 'all' | 'issues' | 'valid' | 'superseded';
 
 export type SortOption = 'original' | 'name' | 'status' | 'confidence';
 

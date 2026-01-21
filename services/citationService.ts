@@ -1,12 +1,14 @@
 import { Citation } from '../types';
 
-// The default pattern from the requirements
-export const DEFAULT_CITATION_PATTERN = "(\\d{1,4}\\s[A-Z][a-z]?\\.?\\s?\\w{1,5}\\.?\\s?\\w{1,3}\\.?\\s\\d{1,4})";
+// Broadened pattern to capture: 
+// 1. Standard: 410 U.S. 113
+// 2. Modern: 597 U.S. 215
+// 3. F.3d/F.Supp: 123 F.3d 456
+export const DEFAULT_CITATION_PATTERN = "(\\d{1,4}\\s[A-Z][a-z0-9\\.]*\\s?[A-Z][a-z0-9\\.]*\\s\\d{1,4})|(\\d{1,4}\\s[A-Z]{1,5}\\.\\d?[a-z]?\\s\\d{1,4})";
 
 export const extractCitations = (text: string, pattern: string = DEFAULT_CITATION_PATTERN): Citation[] => {
   let regex: RegExp;
   try {
-    // Ensure the pattern is global to find all matches
     regex = new RegExp(pattern, 'g');
   } catch (e) {
     console.error("Invalid Regex provided:", e);
@@ -15,20 +17,22 @@ export const extractCitations = (text: string, pattern: string = DEFAULT_CITATIO
 
   const matches = [...text.matchAll(regex)];
   
-  return matches.map((match, index) => {
-    // Deterministic ID based on content and position to prevent React key thrashing
+  const results = matches.map((match, index) => {
     const content = match[0] || '';
     const startIndex = match.index || 0;
-    const stableId = `cite-${startIndex}-${content.replace(/\s/g, '_')}`;
+    const stableId = `cite-${startIndex}-${content.replace(/[^a-zA-Z0-9]/g, '_')}`;
     
     return {
       id: stableId,
       originalText: content,
       startIndex: startIndex,
       endIndex: startIndex + content.length,
-      status: 'pending'
+      status: 'pending' as const
     };
   });
+
+  // Filter out duplicates at same start index
+  return results.filter((v, i, a) => a.findIndex(t => t.startIndex === v.startIndex) === i);
 };
 
 export const highlightText = (text: string, citations: Citation[]): { text: string; isCitation: boolean; citationId?: string }[] => {
@@ -39,7 +43,6 @@ export const highlightText = (text: string, citations: Citation[]): { text: stri
   let lastIndex = 0;
 
   sortedCitations.forEach((cite) => {
-    // Text before citation
     if (cite.startIndex > lastIndex) {
       segments.push({
         text: text.substring(lastIndex, cite.startIndex),
@@ -47,7 +50,6 @@ export const highlightText = (text: string, citations: Citation[]): { text: stri
       });
     }
 
-    // The citation itself
     segments.push({
       text: text.substring(cite.startIndex, cite.endIndex),
       isCitation: true,
@@ -57,7 +59,6 @@ export const highlightText = (text: string, citations: Citation[]): { text: stri
     lastIndex = cite.endIndex;
   });
 
-  // Remaining text
   if (lastIndex < text.length) {
     segments.push({
       text: text.substring(lastIndex),
