@@ -136,6 +136,7 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
               </div>
               
               <div className="mt-2.5 flex flex-col gap-1.5">
+                {/* View Details Button First */}
                 <button 
                   onClick={handleOpenSuperseding}
                   className="w-full text-[8px] font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100/50 py-1.5 rounded transition-all flex items-center justify-center gap-1.5 border border-blue-200/50 bg-white/40 backdrop-blur-sm"
@@ -144,6 +145,7 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
                   View superseding case details
                 </button>
 
+                {/* Apply Button Second (Below) */}
                 <button 
                   onClick={handleApply}
                   className="w-full text-[9px] font-bold uppercase py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
