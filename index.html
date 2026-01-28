@@ -3,10 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-    <title>CiteCheck Pro</title>
+    <title>LexiCite 360 | Legal Precedent Verification</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
     <script>
+      // cPanel Static Deployment Shim
+      // If process.env.API_KEY is not injected by your host, you can define it here.
+      window.process = window.process || { env: { API_KEY: '' } };
+
       tailwind.config = {
         theme: {
           extend: {
@@ -57,5 +61,6 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Automatically imported by environment -->
   </body>
 </html>

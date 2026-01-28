@@ -3,16 +3,16 @@ import { Citation } from '../types';
 import { 
   CheckCircle, XCircle, Loader2, AlertCircle, 
   ExternalLink, Globe, AlertTriangle, ShieldAlert,
-  History, ArrowRight, Info, Scale, Database
+  ArrowRight, Info, Scale, Briefcase
 } from 'lucide-react';
 
 interface CitationCardProps {
   citation: Citation;
-  onApplySuperseding?: (id: string, newName: string) => void;
+  onApplySuperseding?: (id: string, newCitation: string) => void;
 }
 
 const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySuperseding }) => {
-  const isObsolete = citation.legalStatus === 'overruled' || citation.legalStatus === 'superseded';
+  const isObsolete = citation.legalStatus === 'overruled' || citation.legalStatus === 'superseded' || citation.legalStatus === 'retracted';
   const isError = citation.status === 'error';
   
   const getStatusStyles = () => {
@@ -21,10 +21,11 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
     if (isError) return 'border-amber-300 bg-amber-50/30';
     
     switch (citation.legalStatus) {
-      case 'overruled': return 'border-red-500 bg-red-50 ring-2 ring-red-100';
+      case 'overruled': 
+      case 'retracted': return 'border-red-500 bg-red-50 ring-2 ring-red-100';
       case 'superseded': return 'border-orange-500 border-dashed bg-gradient-to-br from-orange-50 to-white shadow-sm ring-1 ring-orange-200/30';
-      case 'caution': return 'border-yellow-400 bg-yellow-50';
-      case 'good': return 'border-green-200 bg-white shadow-sm hover:shadow-md';
+      case 'good':
+      case 'verified': return 'border-green-200 bg-white shadow-sm hover:shadow-md';
       default: return 'border-gray-200 bg-white';
     }
   };
@@ -32,7 +33,7 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
   const getStatusBadge = () => {
     if (citation.status === 'hallucination') return (
       <span className="flex items-center text-[8px] font-black uppercase bg-red-100 text-red-600 px-1.5 py-0.5 rounded tracking-tighter">
-        Hallucination
+        Factual Discrepancy
       </span>
     );
     if (isError) return (
@@ -41,38 +42,21 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
       </span>
     );
     switch (citation.legalStatus) {
-      case 'good': return (
+      case 'good': 
+      case 'verified': return (
         <span className="flex items-center text-[8px] font-black uppercase bg-green-100 text-green-700 px-1.5 py-0.5 rounded tracking-tighter">
-          <CheckCircle className="w-2 h-2 mr-1" /> Current Precedent
-        </span>
-      );
-      case 'overruled': return (
-        <span className="flex items-center text-[8px] font-black uppercase bg-red-600 text-white px-1.5 py-0.5 rounded tracking-tighter shadow-sm animate-pulse">
-          <ShieldAlert className="w-2 h-2 mr-1" /> Obsolete Law
-        </span>
-      );
-      case 'superseded': return (
-        <span className="flex items-center text-[8px] font-black uppercase bg-orange-600 text-white px-2 py-0.5 rounded-full tracking-tighter shadow-sm">
-          <History className="w-2 h-2 mr-1" /> Superseded
+          <CheckCircle className="w-2 h-2 mr-1" /> Good Precedent
         </span>
       );
       default: return null;
     }
   };
 
-  const handleOpenSuperseding = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleViewDetails = () => {
     if (citation.supersedingCase?.uri) {
-      window.open(citation.supersedingCase.uri, '_blank', 'noopener,noreferrer');
+      window.open(citation.supersedingCase.uri, '_blank');
     } else {
-      alert('The verification engine identified the superseding case but no direct web URI was grounded for this specific authority yet.');
-    }
-  };
-
-  const handleApply = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onApplySuperseding && citation.supersedingCase) {
-      onApplySuperseding(citation.id, citation.supersedingCase.name);
+      alert("Further details for this authority are not currently available via the API.");
     }
   };
 
@@ -94,11 +78,18 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
               {citation.originalText}
             </span>
           </div>
-          {citation.isCourtListenerVerified && (
-            <div className="flex items-center text-[7px] font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-1 py-0.5 rounded border border-blue-100 w-fit">
-              <Database className="w-2 h-2 mr-0.5" /> Authoritative Grounding
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            <div className="flex items-center text-[7px] font-black text-gray-500 uppercase tracking-tighter bg-gray-100 px-1 py-0.5 rounded border border-gray-200 w-fit">
+              <Scale className="w-2 h-2 mr-0.5" />
+              LEGAL REFERENCE
             </div>
-          )}
+            {citation.areaOfLaw && (
+              <div className="flex items-center text-[7px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 w-fit">
+                <Briefcase className="w-2 h-2 mr-0.5" />
+                {citation.areaOfLaw}
+              </div>
+            )}
+          </div>
         </div>
         {getStatusBadge()}
       </div>
@@ -106,58 +97,52 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, onApplySupersedin
       {citation.status !== 'checking' && (
         <div className="space-y-3">
           <div className="text-xs font-serif font-bold text-gray-800 leading-tight">
-            {citation.caseName || (isError ? "Verification Interrupted" : "Unidentified Legal Reference")}
+            {citation.caseName || (isError ? "Verification Interrupted" : "Unidentified Source")}
           </div>
 
           {citation.reason && (
             <div className={`text-[10px] leading-relaxed p-2 rounded border ${isError ? 'bg-amber-100/30 border-amber-200 text-amber-900' : isObsolete ? 'bg-red-100/30 border-red-200 text-red-900' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
               <div className="flex items-start">
-                {isError ? <AlertCircle className="w-3 h-3 mr-1.5 mt-0.5 flex-shrink-0 opacity-50" /> : <Info className="w-3 h-3 mr-1.5 mt-0.5 flex-shrink-0 opacity-50" />}
+                <Info className="w-3 h-3 mr-1.5 mt-0.5 flex-shrink-0 opacity-50" />
                 <span>{citation.reason}</span>
               </div>
             </div>
           )}
 
-          {/* SUGGESTION BOX: THE MOST RECENT PRECEDENT */}
           {citation.supersedingCase && (
-            <div className="mt-2 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 rounded-md p-3 shadow-sm relative overflow-hidden group/box">
-              <div className="absolute top-0 right-0 p-1 opacity-10 group-hover/box:opacity-20 transition-opacity">
-                <Scale className="w-8 h-8 rotate-12" />
-              </div>
-              <div className="flex items-center text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1.5">
-                <ArrowRight className="w-3 h-3 mr-1" /> Correct Current Authority
-              </div>
-              <div className="text-xs font-bold text-blue-900 flex items-center justify-between">
-                <span>{citation.supersedingCase.name}</span>
-                <span className="text-[8px] bg-blue-600 text-white px-1 rounded ml-2">LATEST</span>
-              </div>
-              <div className="text-[10px] font-mono text-blue-600 mt-0.5">
-                {citation.supersedingCase.citation}
+            <div className="p-3 bg-red-600 text-white rounded-xl shadow-lg space-y-3 mt-4">
+              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                <ShieldAlert size={12} className="text-white animate-pulse" />
+                Critical Update Available
               </div>
               
-              <div className="mt-2.5 flex flex-col gap-1.5">
-                {/* View Details Button First */}
-                <button 
-                  onClick={handleOpenSuperseding}
-                  className="w-full text-[8px] font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100/50 py-1.5 rounded transition-all flex items-center justify-center gap-1.5 border border-blue-200/50 bg-white/40 backdrop-blur-sm"
-                >
-                  <ExternalLink size={10} className="flex-shrink-0" />
-                  View superseding case details
-                </button>
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold leading-tight line-clamp-2">
+                  {citation.supersedingCase.name}
+                </div>
+                <div className="font-mono text-[9px] opacity-80">
+                  {citation.supersedingCase.citation}
+                </div>
+              </div>
 
-                {/* Apply Button Second (Below) */}
+              <div className="flex flex-col gap-1.5">
                 <button 
-                  onClick={handleApply}
-                  className="w-full text-[9px] font-bold uppercase py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                  onClick={() => onApplySuperseding?.(citation.id, citation.supersedingCase!.citation)}
+                  className="w-full bg-white text-red-700 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
                 >
-                  <ShieldAlert size={10} />
-                  Apply Correct Citation
+                  <ArrowRight size={14} /> Apply Correct Citation
+                </button>
+                
+                <button 
+                  onClick={handleViewDetails}
+                  className="w-full bg-red-700/50 text-white border border-red-400/30 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 hover:bg-red-700/80 transition-colors"
+                >
+                  <ExternalLink size={14} /> View superseding case details
                 </button>
               </div>
             </div>
           )}
 
-          {/* Evidence Log Links */}
           {citation.sources && citation.sources.length > 0 && (
             <div className="pt-2">
               <div className="flex items-center text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">

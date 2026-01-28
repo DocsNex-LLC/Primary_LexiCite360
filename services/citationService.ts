@@ -1,12 +1,18 @@
 import { Citation } from '../types';
 
-// Broadened pattern to capture: 
-// 1. Standard: 410 U.S. 113
-// 2. Modern: 597 U.S. 215
-// 3. F.3d/F.Supp: 123 F.3d 456
-export const DEFAULT_CITATION_PATTERN = "(\\d{1,4}\\s[A-Z][a-z0-9\\.]*\\s?[A-Z][a-z0-9\\.]*\\s\\d{1,4})|(\\d{1,4}\\s[A-Z]{1,5}\\.\\d?[a-z]?\\s\\d{1,4})";
+/**
+ * Regex to capture legal citations: 
+ * 1. Legal: 410 U.S. 113, 123 F.3d 456, 45 U.S.C. § 123, 12 S. Ct. 34
+ */
+export const DEFAULT_CITATION_PATTERN = 
+  // Legal Reporter Standard (Vol Reporter Page) - captures common legal series
+  "(?:\\d{1,4}\\s(?:U\\.?S\\.?|F\\.?\\s?[23]d|S\\.?\\s?Ct\\.?|L\\.?\\s?Ed\\.?\\s?2d|F\\.?\\s?Supp\\.?|A\\.?\\s?2d|P\\.?\\s?[23]d|N\\.?\\s?E\\.?\\s?2d|S\\.?\\s?W\\.?\\s?2d|So\\.?\\s?[23]d|N\\.?\\s?W\\.?\\s?2d|Cal\\.?\\s?Rptr\\.?\\s?[23]d|N\\.?\\s?Y\\.?\\s?S\\.?\\s?2d)\\s\\d{1,4}(?:\\s\\(\\d{4}\\))?)" +
+  // Statute/Code formats (e.g., 28 U.S.C. § 1234)
+  "|(?:\\d{1,4}\\s[A-Z]{1,5}\\.\\s?(?:C\\.|S\\.)\\s?\\d{1,5}(?:\\s?§\\s?\\d{1,5})?)";
 
 export const extractCitations = (text: string, pattern: string = DEFAULT_CITATION_PATTERN): Citation[] => {
+  if (!text.trim()) return [];
+  
   let regex: RegExp;
   try {
     regex = new RegExp(pattern, 'g');
@@ -17,25 +23,28 @@ export const extractCitations = (text: string, pattern: string = DEFAULT_CITATIO
 
   const matches = [...text.matchAll(regex)];
   
-  const results = matches.map((match, index) => {
+  const results = matches.map((match) => {
     const content = match[0] || '';
     const startIndex = match.index || 0;
-    const stableId = `cite-${startIndex}-${content.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const stableId = `cite-${startIndex}-${content.length}`;
     
     return {
       id: stableId,
       originalText: content,
       startIndex: startIndex,
       endIndex: startIndex + content.length,
-      status: 'pending' as const
+      status: 'pending' as const,
+      citationType: 'legal' as const
     };
   });
 
-  // Filter out duplicates at same start index
-  return results.filter((v, i, a) => a.findIndex(t => t.startIndex === v.startIndex) === i);
+  return results
+    .filter((v, i, a) => a.findIndex(t => t.startIndex === v.startIndex) === i)
+    .filter(v => v.originalText.length > 3);
 };
 
 export const highlightText = (text: string, citations: Citation[]): { text: string; isCitation: boolean; citationId?: string }[] => {
+  if (!text) return [];
   if (citations.length === 0) return [{ text, isCitation: false }];
 
   const sortedCitations = [...citations].sort((a, b) => a.startIndex - b.startIndex);
