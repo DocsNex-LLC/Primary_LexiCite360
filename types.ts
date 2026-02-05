@@ -1,3 +1,5 @@
+
+
 export interface CitationSource {
   uri: string;
   title: string;
@@ -73,8 +75,14 @@ export interface ReportJournalEntry {
     legalStatus?: string;
     areaOfLaw?: string;
   }>;
+  // Added properties to match the initialization and usage in App.tsx
+  status: string;
+  thumbnail?: string;
 }
 
 export type CitationFilter = 'all' | 'issues' | 'valid' | 'superseded';
 export type SortOption = 'original' | 'name' | 'status' | 'confidence';
 export type VerificationMode = 'standard' | 'research';
+
+// ViewState defines the possible views/routes for the main application navigation
+export type ViewState = 'library' | 'editor' | 'recent' | 'starred' | 'settings';

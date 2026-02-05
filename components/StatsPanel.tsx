@@ -1,43 +1,41 @@
 import React from 'react';
 import * as Recharts from 'recharts';
 import { AnalysisStats } from '../types';
-import { AlertCircle, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 interface StatsPanelProps {
   stats: AnalysisStats;
 }
 
 const StatsPanel: React.FC<StatsPanelProps> = ({ stats }) => {
-  // Check if Recharts is actually loaded to prevent "Cannot read property of undefined" errors
   const PieChart = Recharts?.PieChart;
   const Pie = Recharts?.Pie;
   const Cell = Recharts?.Cell;
   const ResponsiveContainer = Recharts?.ResponsiveContainer;
-  const Tooltip = Recharts?.Tooltip;
 
   const isChartsAvailable = !!PieChart && !!ResponsiveContainer && !!Pie;
 
   const data = [
-    { name: 'Valid', value: stats.valid, color: '#16a34a' },
-    { name: 'Issues', value: stats.invalid, color: '#dc2626' },
-    { name: 'Pending', value: stats.pending, color: '#2563eb' },
+    { name: 'Valid', value: stats.valid, color: '#22c55e' },
+    { name: 'Issues', value: stats.invalid, color: '#ef4444' },
+    { name: 'Pending', value: stats.pending, color: '#0b3a6f' },
   ].filter(d => d.value > 0);
 
   const percentage = stats.total > 0 ? Math.round((stats.valid / stats.total) * 100) : 0;
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-      <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Verification Health</h3>
+    <div className="bg-white p-6 rounded-3xl border border-[#e6edf4] shadow-sm">
+      <h3 className="text-[11px] font-black text-[#94a3b8] uppercase tracking-[0.2em] mb-4">Verification Audit</h3>
       
-      <div className="flex items-center justify-between">
-        <div className="w-1/2 h-28 relative flex items-center justify-center">
+      <div className="flex items-center">
+        <div className="w-1/2 h-32 relative">
           {isChartsAvailable && stats.total > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={data}
-                  innerRadius={25}
-                  outerRadius={40}
+                  innerRadius={30}
+                  outerRadius={45}
                   paddingAngle={5}
                   dataKey="value"
                   animationDuration={500}
@@ -46,35 +44,33 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats }) => {
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          ) : stats.total > 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-blue-500/40">
-               <Activity className="w-8 h-8 mb-1 animate-pulse" />
-               <span className="text-[7px] uppercase font-bold text-center">Charts Offline</span>
-            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-300">
-               <AlertCircle className="w-6 h-6 mb-1 opacity-20" />
-               <span className="text-[8px] uppercase font-bold">No Data</span>
+            <div className="flex flex-col items-center justify-center h-full text-gray-200">
+               <Activity className="w-8 h-8 opacity-20" />
             </div>
           )}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+             <span className="text-xl font-black text-[#0b3a6f] leading-none">{percentage}%</span>
+          </div>
         </div>
         
-        <div className="w-1/2 pl-4 border-l border-gray-100">
-          <div className="mb-2">
-            <span className="text-3xl font-black text-gray-900 leading-none">{percentage}%</span>
-            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mt-1">Trust Score</span>
+        <div className="flex-1 pl-6 space-y-4">
+          <div>
+            <span className="text-[9px] font-black text-[#94a3b8] uppercase tracking-widest block mb-1">Trust Integrity</span>
+            <div className="h-2 w-full bg-[#f6f8fb] rounded-full overflow-hidden">
+               <div className="h-full bg-[#0b3a6f] transition-all duration-1000" style={{ width: `${percentage}%` }} />
+            </div>
           </div>
-          <div className="space-y-1">
-             <div className="flex justify-between text-[10px]">
-                <span className="text-gray-500">Verified</span>
-                <span className="font-bold text-green-600">{stats.valid}</span>
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+                <span className="text-[14px] font-black text-[#1f2937] block">{stats.valid}</span>
+                <span className="text-[8px] font-bold text-[#22c55e] uppercase tracking-wider">Valid</span>
              </div>
-             <div className="flex justify-between text-[10px]">
-                <span className="text-gray-500">Issues</span>
-                <span className="font-bold text-red-600">{stats.invalid}</span>
+             <div>
+                <span className="text-[14px] font-black text-[#1f2937] block">{stats.invalid}</span>
+                <span className="text-[8px] font-bold text-[#ef4444] uppercase tracking-wider">Issues</span>
              </div>
           </div>
         </div>
